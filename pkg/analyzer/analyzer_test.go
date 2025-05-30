@@ -3,8 +3,8 @@ package analyzer
 import (
 	"testing"
 
-	"github.com/xshoji/go-keywordminer/internal/parser"
-	"github.com/xshoji/go-keywordminer/pkg/config"
+	"github.com/xshoji/go-site-keyword/internal/parser"
+	"github.com/xshoji/go-site-keyword/pkg/config"
 )
 
 type dummyNormalizer struct{}

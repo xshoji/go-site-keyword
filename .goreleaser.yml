@@ -1,7 +1,7 @@
 version: 2
 builds:
-  - main: cmd/keywordminer/main.go
-    binary: keywordminer
+  - main: cmd/sitekeyword/main.go
+    binary: sitekeyword
     goos:
       - windows
       - darwin

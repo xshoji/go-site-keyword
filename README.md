@@ -1,4 +1,4 @@
-# go-keywordminer
+# go-site-keyword
 
 > **Note**: This repository contains code that was largely generated with the assistance of GitHub Copilot (Claude 3.7 Sonnet and GPT-4.1).
 
@@ -17,13 +17,13 @@ A command-line tool that extracts and analyzes keywords from web pages. Addition
 ### Build from source
 
 ```
-GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -trimpath ./cmd/keywordminer
+GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -trimpath ./cmd/sitekeyword
 ```
 
 ### Using Go
 
 ```
-go install github.com/xshoji/go-keywordminer/cmd/keywordminer@latest
+go install github.com/xshoji/go-site-keyword/cmd/sitekeyword@latest
 ```
 
 ## Usage
@@ -31,13 +31,13 @@ go install github.com/xshoji/go-keywordminer/cmd/keywordminer@latest
 Basic usage requires providing a URL to analyze:
 
 ```
-keywordminer -u https://example.com
+sitekeyword -u https://example.com
 ```
 
 or using the long option format:
 
 ```
-keywordminer --url https://example.com
+sitekeyword --url https://example.com
 ```
 
 ### Available Options
@@ -57,7 +57,7 @@ By default, the tool outputs keywords in JSON format:
 With the pretty option:
 
 ```
-keywordminer -u https://example.com -p
+sitekeyword -u https://example.com -p
 ```
 
 ```json
@@ -82,7 +82,7 @@ keywordminer -u https://example.com -p
 With the detail option:
 
 ```
-keywordminer -u https://example.com -p -d
+sitekeyword -u https://example.com -p -d
 ```
 
 ```json

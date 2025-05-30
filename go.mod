@@ -1,4 +1,4 @@
-module github.com/xshoji/go-keywordminer
+module github.com/xshoji/go-site-keyword
 
 go 1.23.0
 
