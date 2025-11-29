@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -22,17 +23,18 @@ const (
 )
 
 var (
+	commandDescription           = "A tool for extracting and analyzing keywords from web pages. \n  Fetches titles, meta tags, and identifies top keywords with their relevance scores."
+	commandOptionMaxLength       = 0
+	commandRequiredOptionExample = "" // Auto-adjusted in defineFlagValue
 	// Command options ( the -h, --help option is defined by default in the flag package )
-	commandDescription     = "A tool for extracting and analyzing keywords from web pages. \n  Fetches titles, meta tags, and identifies top keywords with their relevance scores."
-	commandOptionMaxLength = "22"
-	optionUrl              = defineFlagValue("u", "url" /*    */, Req+"URL" /*   */, "", flag.String, flag.StringVar)
-	optionPretty           = defineFlagValue("p", "pretty" /* */, "Format JSON output with indentation", false, flag.Bool, flag.BoolVar)
-	optionDetail           = defineFlagValue("d", "detail" /* */, "Output all details including title and meta tags", false, flag.Bool, flag.BoolVar)
+	optionUrl    = defineFlagValue("u", "url" /*    */, Req+"URL" /*   */, "", flag.String, flag.StringVar)
+	optionPretty = defineFlagValue("p", "pretty" /* */, "Format JSON output with indentation", false, flag.Bool, flag.BoolVar)
+	optionDetail = defineFlagValue("d", "detail" /* */, "Output all details including title and meta tags", false, flag.Bool, flag.BoolVar)
 )
 
 func init() {
 	// Customize the usage message
-	flag.Usage = customUsage(os.Stdout, commandDescription, commandOptionMaxLength)
+	flag.Usage = customUsage(os.Stdout, commandDescription, strconv.Itoa(commandOptionMaxLength))
 }
 
 // Build:
@@ -110,7 +112,10 @@ func defineFlagValue[T comparable](short, long, description string, defaultValue
 	if defaultValue != zero {
 		flagUsage = flagUsage + fmt.Sprintf(" (default %v)", defaultValue)
 	}
-
+	if strings.Contains(description, Req) {
+		commandRequiredOptionExample = commandRequiredOptionExample + fmt.Sprintf("--%s %T ", long, defaultValue)
+	}
+	commandOptionMaxLength = max(commandOptionMaxLength, len(long)+12)
 	f := flagFunc(long, defaultValue, flagUsage)
 	flagVarFunc(f, short, defaultValue, UsageDummy)
 	return f
@@ -119,7 +124,7 @@ func defineFlagValue[T comparable](short, long, description string, defaultValue
 // Custom usage message
 func customUsage(output io.Writer, description, fieldWidth string) func() {
 	return func() {
-		fmt.Fprintf(output, "Usage: %s [OPTIONS]\n\n", func() string { e, _ := os.Executable(); return filepath.Base(e) }())
+		fmt.Fprintf(output, "Usage: %s %s[OPTIONS]\n\n", func() string { e, _ := os.Executable(); return filepath.Base(e) }(), commandRequiredOptionExample)
 		fmt.Fprintf(output, "Description:\n  %s\n\n", description)
 		fmt.Fprintf(output, "Options:\n%s", getOptionsUsage(fieldWidth, false))
 	}
