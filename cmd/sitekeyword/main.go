@@ -17,13 +17,13 @@ import (
 )
 
 const (
-	Req        = "\u001B[33m" + "(REQ)" + "\u001B[0m "
+	Req        = "\x1b[33m" + "(required)" + "\x1b[0m "
 	UsageDummy = "########"
 	TimeFormat = "2006-01-02 15:04:05.0000 [MST]"
 )
 
 var (
-	commandDescription           = "A tool for extracting and analyzing keywords from web pages. \n  Fetches titles, meta tags, and identifies top keywords with their relevance scores."
+	commandDescription           = "A tool for extracting and analyzing keywords from web pages. Fetches titles, meta tags, and identifies top keywords with their relevance scores."
 	commandOptionMaxLength       = 0
 	commandRequiredOptionExample = "" // Auto-adjusted in defineFlagValue
 	// Command options ( the -h, --help option is defined by default in the flag package )
@@ -34,7 +34,7 @@ var (
 
 func init() {
 	// Customize the usage message
-	flag.Usage = customUsage(os.Stdout, commandDescription, strconv.Itoa(commandOptionMaxLength))
+	flag.Usage = customUsage(os.Stdout, commandDescription, strconv.Itoa(commandOptionMaxLength), commandRequiredOptionExample)
 }
 
 // Build:
@@ -122,9 +122,9 @@ func defineFlagValue[T comparable](short, long, description string, defaultValue
 }
 
 // Custom usage message
-func customUsage(output io.Writer, description, fieldWidth string) func() {
+func customUsage(output io.Writer, description, fieldWidth, requiredOptionExample string) func() {
 	return func() {
-		fmt.Fprintf(output, "Usage: %s %s[OPTIONS]\n\n", func() string { e, _ := os.Executable(); return filepath.Base(e) }(), commandRequiredOptionExample)
+		fmt.Fprintf(output, "Usage: %s %s[OPTIONS]\n\n", func() string { e, _ := os.Executable(); return filepath.Base(e) }(), requiredOptionExample)
 		fmt.Fprintf(output, "Description:\n  %s\n\n", description)
 		fmt.Fprintf(output, "Options:\n%s", getOptionsUsage(fieldWidth, false))
 	}
