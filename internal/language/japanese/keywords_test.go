@@ -21,6 +21,30 @@ func TestExtractJapaneseKeywords(t *testing.T) {
 	}
 }
 
+func TestExtractJapaneseKeywords_CompoundNoun(t *testing.T) {
+	text := "人工知能と機械学習は現代の技術です。自然言語処理も重要な分野です。"
+	keywords := ExtractJapaneseKeywords(text)
+	// Should contain compound nouns
+	compoundFound := false
+	for _, k := range keywords {
+		if k == "人工知能" || k == "機械学習" || k == "自然言語" || k == "言語処理" {
+			compoundFound = true
+			break
+		}
+	}
+	if !compoundFound {
+		t.Errorf("expected compound nouns, got %v", keywords)
+	}
+}
+
+func TestExtractJapaneseKeywordsWithFrequency(t *testing.T) {
+	text := "テストのテストです。Go言語とGo言語のテスト。"
+	freq := ExtractJapaneseKeywordsWithFrequency(text)
+	if len(freq) == 0 {
+		t.Error("expected some keywords, got none")
+	}
+}
+
 func TestIsSymbolOrPunctuation(t *testing.T) {
 	if !isSymbolOrPunctuation("！＠＃") {
 		t.Error("expected true for symbols")

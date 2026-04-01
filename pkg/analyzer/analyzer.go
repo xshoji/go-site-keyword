@@ -59,16 +59,14 @@ func (a *Analyzer) FetchMetaTags() (map[string]string, error) {
 }
 
 func (a *Analyzer) FetchMainContent() (string, error) {
-	var content string
-	hTags := a.doc.FetchTags("h1")
-	hTags = append(hTags, a.doc.FetchTags("h2")...)
-	hTags = append(hTags, a.doc.FetchTags("h3")...)
-	for _, headingText := range hTags {
-		if headingText != "" {
-			content += headingText + " " + headingText + " " + headingText + " "
+	segments := a.doc.ExtractStructuredText()
+	var parts []string
+	for _, seg := range segments {
+		if seg.Source == "body" || seg.Source == "h1" || seg.Source == "h2" || seg.Source == "h3" {
+			parts = append(parts, seg.Text)
 		}
 	}
-	return content, nil
+	return strings.Join(parts, " "), nil
 }
 
 func (a *Analyzer) CollectPageData() (*PageData, error) {
@@ -82,73 +80,80 @@ func (a *Analyzer) CollectPageData() (*PageData, error) {
 	}, nil
 }
 
+// sourceWeight returns the config weight for a given TextSegment source.
+func (a *Analyzer) sourceWeight(source string) int {
+	w := a.Config.ScoreWeights
+	switch source {
+	case "title":
+		return w.Title
+	case "meta_keywords":
+		return w.MetaKeyword
+	case "meta_description":
+		return w.MetaDescription
+	case "h1":
+		return w.H1
+	case "h2", "h3":
+		return w.H2H3
+	case "emphasis":
+		return w.Emphasis
+	case "anchor":
+		return w.Anchor
+	case "alt":
+		return w.Alt
+	case "body":
+		return w.Body
+	default:
+		return 1
+	}
+}
+
+// GetTopKeywords extracts keywords using the new multi-layer pipeline.
+// stopWords and normalizeKeyword are used for English text normalization.
 func (a *Analyzer) GetTopKeywords(n int, stopWords map[string]int, normalizeKeyword func(string) string) ([]scoring.KeywordWithScore, error) {
 	cfg := a.Config
-	weightMetaKeyword := cfg.ScoreWeights.MetaKeyword
-	weightTitle := cfg.ScoreWeights.Title
-	weightDesc := cfg.ScoreWeights.Description
-	weightMain := cfg.ScoreWeights.MainContent
 	if n <= 0 {
 		n = cfg.MaxKeywords
 	}
-	scoreMap := map[string]int{}
-	originalMap := map[string]string{}
 
-	// タイトル
-	title, _ := a.FetchTitle()
-	if title != "" {
-		for _, k := range extractKeywords(title, stopWords, normalizeKeyword) {
-			normKey := k
-			scoreMap[normKey] += weightTitle
-			if existing, ok := originalMap[normKey]; !ok || len(k) > len(existing) {
-				originalMap[normKey] = k
+	segments := a.doc.ExtractStructuredText()
+	totalSegments := len(segments)
+
+	// Accumulate scores: normalized keyword → raw score (float64)
+	scoreMap := make(map[string]float64)
+	// Track original surface form
+	originalMap := make(map[string]string)
+	// Track first occurrence position (0.0 - 1.0)
+	firstPosMap := make(map[string]float64)
+
+	for i, seg := range segments {
+		position := 0.5
+		if totalSegments > 1 {
+			position = float64(i) / float64(totalSegments-1)
+		}
+		weight := a.sourceWeight(seg.Source)
+
+		// Extract keywords with frequency from the segment text
+		var freqMap map[string]int
+		if language.ContainsJapanese(seg.Text) {
+			freqMap = japanese.ExtractJapaneseKeywordsWithFrequency(seg.Text)
+		} else {
+			freqMap = english.ExtractEnglishKeywordsWithFrequency(seg.Text, stopWords, normalizeKeyword)
+		}
+
+		for kw, freq := range freqMap {
+			scoreMap[kw] += float64(freq) * float64(weight)
+			// Track original form (prefer longer surface)
+			if existing, ok := originalMap[kw]; !ok || len(kw) > len(existing) {
+				originalMap[kw] = kw
+			}
+			// Track first position
+			if _, ok := firstPosMap[kw]; !ok {
+				firstPosMap[kw] = position
 			}
 		}
 	}
 
-	// メタキーワード
-	meta := a.doc.FetchMetaTags()
-	if keywords, ok := meta["keywords"]; ok {
-		for _, k := range extractKeywords(keywords, stopWords, normalizeKeyword) {
-			normKey := k
-			scoreMap[normKey] += weightMetaKeyword
-			if existing, ok := originalMap[normKey]; !ok || len(k) > len(existing) {
-				originalMap[normKey] = k
-			}
-		}
-	}
-
-	// 説明文
-	desc := ""
-	if d, ok := meta["description"]; ok {
-		desc = d
-	}
-	if d, ok := meta["og:description"]; ok && len(d) > len(desc) {
-		desc = d
-	}
-	if desc != "" {
-		for _, k := range extractKeywords(desc, stopWords, normalizeKeyword) {
-			normKey := k
-			scoreMap[normKey] += weightDesc
-			if existing, ok := originalMap[normKey]; !ok || len(k) > len(existing) {
-				originalMap[normKey] = k
-			}
-		}
-	}
-
-	// メインコンテンツ
-	mainContent, _ := a.FetchMainContent()
-	if mainContent != "" {
-		for _, k := range extractKeywords(mainContent, stopWords, normalizeKeyword) {
-			normKey := k
-			scoreMap[normKey] += weightMain
-			if existing, ok := originalMap[normKey]; !ok || len(k) > len(existing) {
-				originalMap[normKey] = k
-			}
-		}
-	}
-
-	return scoring.RankKeywordsByScore(scoreMap, originalMap, n), nil
+	return scoring.RankKeywordsAdvanced(scoreMap, originalMap, firstPosMap, n, cfg.MinScore), nil
 }
 
 // extractKeywords: 言語自動判定して適切な抽出関数を呼ぶ

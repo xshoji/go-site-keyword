@@ -71,6 +71,7 @@ type Config struct {
 	UserAgent         string
 	ScoreWeights      ScoreWeightConfig
 	MaxKeywords       int
+	MinScore          float64
 	IgnoreStopWords   bool
 	EnglishStopWords  map[string]int
 	PluralSingularMap map[string]string
@@ -78,10 +79,15 @@ type Config struct {
 }
 
 type ScoreWeightConfig struct {
-	Title       int
-	MetaKeyword int
-	Description int
-	MainContent int
+	Title           int
+	MetaKeyword     int
+	MetaDescription int
+	H1              int
+	H2H3            int
+	Emphasis        int
+	Anchor          int
+	Alt             int
+	Body            int
 }
 
 // DefaultConfig はデフォルト設定を返します
@@ -90,12 +96,18 @@ func DefaultConfig() Config {
 		Timeout:   10 * time.Second,
 		UserAgent: "Mozilla/5.0 (compatible; KeywordBot/1.0)",
 		ScoreWeights: ScoreWeightConfig{
-			Title:       5,
-			MetaKeyword: 8,
-			Description: 3,
-			MainContent: 1,
+			Title:           10,
+			MetaKeyword:     8,
+			MetaDescription: 6,
+			H1:              8,
+			H2H3:            5,
+			Emphasis:        3,
+			Anchor:          2,
+			Alt:             2,
+			Body:            1,
 		},
 		MaxKeywords:       20,
+		MinScore:          2.0,
 		IgnoreStopWords:   false,
 		EnglishStopWords:  DefaultEnglishStopWords,
 		PluralSingularMap: DefaultPluralSingularMap,
