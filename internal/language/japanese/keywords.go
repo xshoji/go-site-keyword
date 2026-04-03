@@ -54,19 +54,11 @@ func shouldKeepSurface(surface string) bool {
 	if isSymbolOrPunctuation(surface) {
 		return false
 	}
+	if containsSymbol(surface) {
+		return false
+	}
 	if isJapaneseStopWord(surface) {
 		return false
-	}
-	// Filter parenthesized short strings like "(水)", "(月)" etc.
-	if len(runes) >= 2 && (runes[0] == '(' || runes[0] == '（') &&
-		(runes[len(runes)-1] == ')' || runes[len(runes)-1] == '）') {
-		return false
-	}
-	// Filter strings containing parentheses (partial brackets from tokenizer)
-	for _, r := range runes {
-		if r == '(' || r == ')' || r == '（' || r == '）' {
-			return false
-		}
 	}
 	return true
 }
@@ -188,4 +180,17 @@ func isSymbolOrPunctuation(text string) bool {
 		}
 	}
 	return true
+}
+
+// containsSymbol returns true if the text contains any punctuation or bracket characters.
+// This filters out tokens like "(木", "ページ)" that the tokenizer produces.
+func containsSymbol(text string) bool {
+	for _, r := range text {
+		if unicode.IsPunct(r) || unicode.IsSymbol(r) ||
+			r == '(' || r == ')' || r == '（' || r == '）' ||
+			r == '「' || r == '」' || r == '『' || r == '』' {
+			return true
+		}
+	}
+	return false
 }

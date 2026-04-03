@@ -48,12 +48,8 @@ func (h *HTMLDocument) ExtractStructuredText() []TextSegment {
 	// Clone the document to avoid mutating the original
 	clone := h.Doc.Clone()
 
-	// Remove noise elements from the clone
+	// Remove non-content elements defined by HTML spec
 	clone.Find("script, style, noscript, svg, iframe, nav, footer, header, aside").Remove()
-	// Remove common site-specific noise (sidebars, navigation boxes, info panels)
-	clone.Find("[role='navigation'], [role='complementary'], [role='banner']").Remove()
-	clone.Find(".sidebar, .navbox, .infobox, .mw-panel, .interlanguage-link, .mw-editsection").Remove()
-	clone.Find("[class*='sidebar'], [class*='navbox'], [class*='infobox']").Remove()
 
 	// title
 	if text := strings.TrimSpace(clone.Find("title").Text()); text != "" {
@@ -111,13 +107,10 @@ func (h *HTMLDocument) ExtractStructuredText() []TextSegment {
 		}
 	})
 
-	// img[alt] — skip placeholder/missing alt text
+	// img[alt]
 	clone.Find("img[alt]").Each(func(i int, s *goquery.Selection) {
 		if alt, exists := s.Attr("alt"); exists {
-			trimmed := strings.TrimSpace(alt)
-			lower := strings.ToLower(trimmed)
-			if trimmed != "" && lower != "image" && lower != "photo" &&
-				!strings.Contains(lower, "missing") && !strings.Contains(lower, "placeholder") {
+			if trimmed := strings.TrimSpace(alt); trimmed != "" {
 				segments = append(segments, TextSegment{Text: trimmed, Source: "alt", Weight: 2})
 			}
 		}
@@ -132,8 +125,8 @@ func (h *HTMLDocument) ExtractStructuredText() []TextSegment {
 		}
 	})
 
-	// Body text: p, li, td, dd, blockquote, article
-	clone.Find("p, li, td, dd, blockquote, article > *:not(h1):not(h2):not(h3):not(strong):not(em):not(b)").Each(func(i int, s *goquery.Selection) {
+	// Body text: p, li, td, dd, blockquote
+	clone.Find("p, li, td, dd, blockquote").Each(func(i int, s *goquery.Selection) {
 		if text := strings.TrimSpace(s.Text()); text != "" {
 			segments = append(segments, TextSegment{Text: text, Source: "body", Weight: 1})
 		}

@@ -107,8 +107,8 @@ func (a *Analyzer) sourceWeight(source string) int {
 	}
 }
 
-// GetTopKeywords extracts keywords using the new multi-layer pipeline.
-// stopWords and normalizeKeyword are used for English text normalization.
+// GetTopKeywords extracts keywords using the multi-layer pipeline.
+// Score = Σ(frequency_in_source × source_weight)
 func (a *Analyzer) GetTopKeywords(n int, stopWords map[string]int, normalizeKeyword func(string) string) ([]scoring.KeywordWithScore, error) {
 	cfg := a.Config
 	if n <= 0 {
@@ -116,23 +116,13 @@ func (a *Analyzer) GetTopKeywords(n int, stopWords map[string]int, normalizeKeyw
 	}
 
 	segments := a.doc.ExtractStructuredText()
-	totalSegments := len(segments)
 
-	// Accumulate scores: normalized keyword → raw score (float64)
-	scoreMap := make(map[string]float64)
-	// Track original surface form
+	scoreMap := make(map[string]int)
 	originalMap := make(map[string]string)
-	// Track first occurrence position (0.0 - 1.0)
-	firstPosMap := make(map[string]float64)
 
-	for i, seg := range segments {
-		position := 0.5
-		if totalSegments > 1 {
-			position = float64(i) / float64(totalSegments-1)
-		}
+	for _, seg := range segments {
 		weight := a.sourceWeight(seg.Source)
 
-		// Extract keywords with frequency from the segment text
 		var freqMap map[string]int
 		if language.ContainsJapanese(seg.Text) {
 			freqMap = japanese.ExtractJapaneseKeywordsWithFrequency(seg.Text)
@@ -141,19 +131,14 @@ func (a *Analyzer) GetTopKeywords(n int, stopWords map[string]int, normalizeKeyw
 		}
 
 		for kw, freq := range freqMap {
-			scoreMap[kw] += float64(freq) * float64(weight)
-			// Track original form (prefer longer surface)
-			if existing, ok := originalMap[kw]; !ok || len(kw) > len(existing) {
+			scoreMap[kw] += freq * weight
+			if _, ok := originalMap[kw]; !ok {
 				originalMap[kw] = kw
-			}
-			// Track first position
-			if _, ok := firstPosMap[kw]; !ok {
-				firstPosMap[kw] = position
 			}
 		}
 	}
 
-	return scoring.RankKeywordsAdvanced(scoreMap, originalMap, firstPosMap, n, cfg.MinScore), nil
+	return scoring.RankKeywordsByScore(scoreMap, originalMap, n), nil
 }
 
 // extractKeywords: 言語自動判定して適切な抽出関数を呼ぶ
